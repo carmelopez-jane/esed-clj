@@ -11,7 +11,7 @@
     <header class="bg-esed text-esed p-4 text-center">
       <div class="container mx-auto">
         <h1 class="text-3xl font-semibold">
-          <a href="index.html">ESED Aggregation Challenge</a>
+          ESED Aggregation Challenge
         </h1>
       </div>
     </header>
