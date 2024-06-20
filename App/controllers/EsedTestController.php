@@ -5,6 +5,7 @@ namespace App\Controllers;
 use GuzzleHttp\Client;
 use GuzzleHttp\Exception\RequestException;
 use GuzzleHttp\Promise\Utils;
+use GuzzleHttp\RequestOptions;
 
 class EsedTestController {
 
@@ -21,11 +22,11 @@ class EsedTestController {
     $client = new Client();
     $urls = [
       //'https://3gxdus4fe2.execute-api.eu-west-3.amazonaws.com/v1',
-      'https://school.uni4me.net/api.php?endpoint=endpoint1',
+      'http://clj-online.com/api.php?endpoint=endpoint1',
       //'https://3gxdus4fe2.execute-api.eu-west-3.amazonaws.com/v2',
-      'https://school.uni4me.net/api.php?endpoint=endpoint2',
+      'http://clj-online.com/api.php?endpoint=endpoint2',
       //'https://3gxdus4fe2.execute-api.eu-west-3.amazonaws.com/v3'
-      'https://school.uni4me.net/api.php?endpoint=endpoint3'
+      'http://clj-online.com/api.php?endpoint=endpoint3'
     ];
 
     $allSuccess = false;
@@ -36,62 +37,73 @@ class EsedTestController {
         $promises[] = $this->fetchWithRetries($client, $url);
       }
 
-      $results = Utils::settle($promises)->wait();
-      $res = [];
+      try {
+        $results = Utils::settle($promises)->wait();
+        $res = [];
 
-      $allSuccess = true;
-      foreach ($results as $i => $result) {
-        if ($result['state'] === 'fulfilled') {
-          $jsonResponse = json_decode($result['value'], true);
-          if (json_last_error() === JSON_ERROR_NONE) {
-            $res["endpoint" . ($i + 1)] = $jsonResponse;
+        $allSuccess = true;
+        foreach ($results as $i => $result) {
+          if ($result['state'] === 'fulfilled') {
+            $jsonResponse = json_decode($result['value'], true);
+            if (json_last_error() === JSON_ERROR_NONE) {
+                $res["endpoint" . ($i + 1)] = $jsonResponse;
+            } else {
+                $allSuccess = false;
+            }
+          } elseif ($result['state'] === 'rejected' && $result['reason'] instanceof ConnectException) {
+              $allSuccess = false;
+              echo "Request to {$urls[$i]} timed out or failed: " . $result['reason']->getMessage() . "\n";
           } else {
-            $allSuccess = false;
+              $allSuccess = false;
+              echo "Failed to fetch {$urls[$i]}: {$result['reason']->getMessage()}\n";
           }
         }
-      }
 
-      if($allSuccess) {
-        $finalResult = $this->manipulateResults($res);
+        if($allSuccess) {
+          $finalResult = $this->manipulateResults($res);
 
-        loadView('index', [
-          'finalResult' => $finalResult
-        ]);
+          loadView('index', [
+            'finalResult' => $finalResult
+          ]);
+        }
+      } catch (ConnectException $e) {
+        echo "Connection timeout: " . $e->getMessage() . "\n";
+        $allSuccess = false;
       }
     }
   }
 
   /**
-   * Function to call API's end points
+   * Function to call API's end points with retries
    *
    * @param Client $client
    * @param string $url
    * @param float $backoffFactor
-   * @return void
+   * @return PromiseInterface
    */
-  public function fetchWithRetries(Client $client, $url, $backoffFactor = 1.0)
-  {
+  public function fetchWithRetries(Client $client, $url, $backoffFactor = 1.0) {
     $attempt = 0;
 
     $makeRequest = function () use ($client, $url, &$attempt, $backoffFactor, &$makeRequest) {
-        return $client->getAsync($url)
-            ->then(
-                function ($response) {
-                    return $response->getBody()->getContents();
-                },
-                function ($exception) use (&$attempt, $backoffFactor, &$makeRequest, $url) {
-                    if ($exception instanceof RequestException) {
-                        $attempt++;
-                        $delay = $backoffFactor * (2 ** $attempt);
-                        echo "Request to {$url} failed: {$exception->getMessage()}. Retrying in {$delay} seconds...\n";
-                        return Utils::sleep($delay)->then(function () use ($makeRequest) {
-                            return $makeRequest();
-                        });
-                    } else {
-                        throw $exception;
-                    }
+        return $client->getAsync($url, [
+            RequestOptions::TIMEOUT => 30,
+        ])->then(
+            function ($response) {
+                return $response->getBody()->getContents();
+            },
+            function ($exception) use (&$attempt, $backoffFactor, &$makeRequest, $url) {
+                if ($exception instanceof ConnectException) {
+                    $attempt++;
+                    $delay = $backoffFactor * (2 ** $attempt);
+                    echo "Request to {$url} timed out or failed: {$exception->getMessage()}. Retrying in {$delay} seconds...\n";
+                    return Utils::sleep($delay * 1000)->then(function () use ($makeRequest) {
+                        return $makeRequest();
+                    });
+                } else {
+                    throw $exception;
                 }
-            );
+            }
+        );
     };
 
     return $makeRequest();

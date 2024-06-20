@@ -59,5 +59,7 @@ class Router {
         return;
       }
     }
+
+    ErrorController::notFound();
   }
 }
