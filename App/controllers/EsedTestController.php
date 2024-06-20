@@ -1,0 +1,127 @@
+<?php
+
+namespace App\Controllers;
+
+use GuzzleHttp\Client;
+use GuzzleHttp\Exception\RequestException;
+use GuzzleHttp\Promise\Utils;
+
+class EsedTestController {
+
+  public function __construct() {
+  }
+
+  /**
+   * List all products
+   *
+   * @return void
+   */
+  public function index() {
+
+    $client = new Client();
+    $urls = [
+      //'https://3gxdus4fe2.execute-api.eu-west-3.amazonaws.com/v1',
+      'https://school.uni4me.net/api.php?endpoint=endpoint1',
+      //'https://3gxdus4fe2.execute-api.eu-west-3.amazonaws.com/v2',
+      'https://school.uni4me.net/api.php?endpoint=endpoint2',
+      //'https://3gxdus4fe2.execute-api.eu-west-3.amazonaws.com/v3'
+      'https://school.uni4me.net/api.php?endpoint=endpoint3'
+    ];
+
+    $allSuccess = false;
+
+    while (!$allSuccess) {
+      $promises = [];
+      foreach ($urls as $url) {
+        $promises[] = $this->fetchWithRetries($client, $url);
+      }
+
+      $results = Utils::settle($promises)->wait();
+      $res = [];
+
+      $allSuccess = true;
+      foreach ($results as $i => $result) {
+        if ($result['state'] === 'fulfilled') {
+          $jsonResponse = json_decode($result['value'], true);
+          if (json_last_error() === JSON_ERROR_NONE) {
+            $res["endpoint" . ($i + 1)] = $jsonResponse;
+          } else {
+            $allSuccess = false;
+          }
+        }
+      }
+
+      if($allSuccess) {
+        $finalResult = $this->manipulateResults($res);
+
+        loadView('index', [
+          'finalResult' => $finalResult
+        ]);
+      }
+    }
+  }
+
+  /**
+   * Function to call API's end points
+   *
+   * @param Client $client
+   * @param string $url
+   * @param float $backoffFactor
+   * @return void
+   */
+  public function fetchWithRetries(Client $client, $url, $backoffFactor = 1.0)
+  {
+    $attempt = 0;
+
+    $makeRequest = function () use ($client, $url, &$attempt, $backoffFactor, &$makeRequest) {
+        return $client->getAsync($url)
+            ->then(
+                function ($response) {
+                    return $response->getBody()->getContents();
+                },
+                function ($exception) use (&$attempt, $backoffFactor, &$makeRequest, $url) {
+                    if ($exception instanceof RequestException) {
+                        $attempt++;
+                        $delay = $backoffFactor * (2 ** $attempt);
+                        echo "Request to {$url} failed: {$exception->getMessage()}. Retrying in {$delay} seconds...\n";
+                        return Utils::sleep($delay)->then(function () use ($makeRequest) {
+                            return $makeRequest();
+                        });
+                    } else {
+                        throw $exception;
+                    }
+                }
+            );
+    };
+
+    return $makeRequest();
+  }
+
+  /**
+   * Function to normalize results
+   *
+   * @param array $results
+   * @return results
+   */
+  public function manipulateResults($res) {
+    $finalResult = [];
+    $id = 1;
+    foreach ($res as $endpoint => $data) {
+      foreach ($data as $item) {
+        $normalizedItem = [
+          'id' => $id,
+          'name' => $item['name'],
+          'path' => $item['path'],
+          'mass' => isset($item['weight']) ? $item['weight'] : (isset($item['mass']) ? $item['mass'] : 0),
+          'mass_unit' => isset($item['weight_unit']) ? $item['weight_unit'] : (isset($item['mass_unit']) ? $item['mass_unit'] : ''),
+          'family' => isset($item['family']) ? $item['family'] : (isset($item['category']) ? $item['category'] : (isset($item['tag']) ? $item['tag'] : '')),
+          'user' => isset($item['user']) ? $item['user'] : 'anonymous'
+        ];
+        $id++;
+        $finalResult[] = $normalizedItem;
+      }
+    }
+
+    return $finalResult;
+  }
+}

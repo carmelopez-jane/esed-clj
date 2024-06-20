@@ -733,6 +733,18 @@ video {
   background-color: rgb(30 58 138 / var(--tw-bg-opacity));
 }
 
+.bg-esed {
+  background-color: #212529;
+}
+
+.bg-esed-2 {
+  background-color: #70afc2;
+}
+
+.hover\:bg-esed-hover:hover {
+  background-color: #3a8ba3;
+}
+
 .bg-gray-100 {
   --tw-bg-opacity: 1;
   background-color: rgb(243 244 246 / var(--tw-bg-opacity));
@@ -838,6 +850,14 @@ video {
 
 .text-center {
   text-align: center;
+}
+
+.text-esed {
+  color: #70afc2;
+}
+
+.text-esed-2 {
+  color: #212529;
 }
 
 .text-3xl {

@@ -1,0 +1,23 @@
+{
+  "name": "carmelopez-jane/esed-challenge",
+  "description": "esed challenge",
+  "authors": [
+    {
+      "name": "carme",
+      "email": "carme@clj-online.com"
+    }
+  ],
+  "autoload": {
+    "psr-4": {
+      "Framework\\": "Framework/",
+      "App\\": "App/"
+    }
+  },
+  "scripts": {
+    "build": "tailwindcss -i ./public/css/style.css -o dist/styles.css"
+  },
+  "require": {
+    "guzzlehttp/guzzle": "^7.8",
+    "guzzlehttp/promises": "^2.0"
+  }
+}
