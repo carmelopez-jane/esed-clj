@@ -21,12 +21,12 @@ class EsedTestController {
 
     $client = new Client();
     $urls = [
-      //'https://3gxdus4fe2.execute-api.eu-west-3.amazonaws.com/v1',
-      'http://clj-online.com/api.php?endpoint=endpoint1',
-      //'https://3gxdus4fe2.execute-api.eu-west-3.amazonaws.com/v2',
-      'http://clj-online.com/api.php?endpoint=endpoint2',
-      //'https://3gxdus4fe2.execute-api.eu-west-3.amazonaws.com/v3'
-      'http://clj-online.com/api.php?endpoint=endpoint3'
+      'https://3gxdus4fe2.execute-api.eu-west-3.amazonaws.com/v1',
+      //'http://clj-online.com/api.php?endpoint=endpoint1',
+      'https://3gxdus4fe2.execute-api.eu-west-3.amazonaws.com/v2',
+      //'http://clj-online.com/api.php?endpoint=endpoint2',
+      'https://3gxdus4fe2.execute-api.eu-west-3.amazonaws.com/v3'
+      //'http://clj-online.com/api.php?endpoint=endpoint3'
     ];
 
     $allSuccess = false;
@@ -52,10 +52,8 @@ class EsedTestController {
             }
           } elseif ($result['state'] === 'rejected' && $result['reason'] instanceof ConnectException) {
               $allSuccess = false;
-              echo "Request to {$urls[$i]} timed out or failed: " . $result['reason']->getMessage() . "\n";
           } else {
               $allSuccess = false;
-              echo "Failed to fetch {$urls[$i]}: {$result['reason']->getMessage()}\n";
           }
         }
 
