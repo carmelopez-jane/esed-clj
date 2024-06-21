@@ -115,11 +115,9 @@ class EsedTestController {
    */
   public function manipulateResults($res) {
     $finalResult = [];
-    $id = 1;
     foreach ($res as $endpoint => $data) {
       foreach ($data as $item) {
         $normalizedItem = [
-          'id' => $id,
           'name' => $item['name'],
           'path' => $item['path'],
           'mass' => isset($item['weight']) ? $item['weight'] : (isset($item['mass']) ? $item['mass'] : 0),
@@ -127,7 +125,6 @@ class EsedTestController {
           'family' => isset($item['family']) ? $item['family'] : (isset($item['category']) ? $item['category'] : (isset($item['tag']) ? $item['tag'] : '')),
           'user' => isset($item['user']) ? $item['user'] : 'anonymous'
         ];
-        $id++;
         $finalResult[] = $normalizedItem;
       }
     }
